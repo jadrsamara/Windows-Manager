@@ -116,9 +116,22 @@ def save_windows():
         window.destroy()
 
     def start_at_startup():
+
+        def get_display_name():
+            GetUserNameEx = ctypes.windll.secur32.GetUserNameExW
+            NameDisplay = 2
+
+            size = ctypes.pointer(ctypes.c_ulong(0))
+            GetUserNameEx(NameDisplay, None, size)
+
+            nameBuffer = ctypes.create_unicode_buffer(size.contents.value)
+            GetUserNameEx(NameDisplay, nameBuffer, size)
+            return nameBuffer.value
+
         try:
-            path = os.path.join(winshell.startup(), 'Load WM Settings.lnk')
-            target = "load_saved_settings_WL.py"
+            startup = winshell.startup()
+            path = os.path.join(startup, 'Load WM Settings.lnk')
+            target = os.path.join(os.getcwd(), "load_saved_settings_WL.pyw")
             shell = win32com.client.Dispatch("WScript.Shell")
             shortcut = shell.CreateShortCut(path)
             shortcut.Targetpath = target
@@ -326,7 +339,21 @@ def is_settings_available():
         open(os.path.join(os.path.expanduser('~'), 'Documents\\WindowsManager', 'settings.wm'), 'w')
 
 
+def admin_rights():
+    def is_admin():
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except:
+            return False
+    if is_admin():
+        return
+    else:
+        # Re-run the program with admin rights
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+
+
 if __name__ == '__main__':
+    # admin_rights()
     is_settings_available()
     get_window_names()
     gui_thread = threading.Thread(target=save_windows())
